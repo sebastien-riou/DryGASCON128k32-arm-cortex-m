@@ -20,7 +20,7 @@ Code size in bytes, results may vary slightly depending on how you call the func
 | BOTH | 1656      | 1600      | 1632      | 1568      |  
 
 ### Measurement method:
-Figures are obtained by setting VALIDATION=0 and changing constants DO_HASH and DO_AEAD in main.cpp
+Figures are obtained by setting VALIDATION=0 and changing constants DO_HASH and DO_AEAD in test/test.cpp
 Example for Cortex-M4: output of build with platformio's defaults
 ````
 #define DO_HASH 0
