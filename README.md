@@ -53,3 +53,14 @@ Requirements on inputs:
 - AEAD key is 32 bytes (so called `fast profile`)
     - 16 lsb can be anything
     - 16 msb shall encode unique 32 bit words
+
+## How to build ?
+This repository is a ready to use platformio project. If you wish to use something else, you can have a look at platformio.ini for hints, it is self explanatory.
+
+---
+
+NOTE: The project uses `mbed` or `arduino` framework depending on the target. Those frameworks are not needed at all if you just want to insert DryGASCON into your project. 
+
+---
+
+Other implementations of DryGASCON can be found here: [DryGASCON](https://github.com/sebastien-riou/DryGASCON).
