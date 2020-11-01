@@ -1,6 +1,6 @@
 #include "crypto_aead.h"
 #include "api.h"
-#include "drygascon.h"
+#include "drygascon128k32.h"
 
 int crypto_aead_encrypt
     (unsigned char *c, unsigned long long *clen,

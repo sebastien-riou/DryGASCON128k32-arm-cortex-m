@@ -19,12 +19,18 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include "drygascon.h"
-#include "drygascon128_arm_selector.h"
+#include "drygascon128k32.h"
+#include "drygascon128core.h"
 #include <stdint.h>
 #include <string.h>
 
-//#define DRYGASCON_DEBUG
+// Compilation options:
+// #define AEAD_DETECT_OVERLAP
+//      detect if in==out and handle this case correctly
+//      NOTE: if in!=out but there is still some overlap then the behavior is undefined
+// #define DRYGASCON_DEBUG
+//      Print the state at various stages of the computation
+
 
 #ifdef DRYGASCON_DEBUG
     #include <stdio.h>
@@ -139,7 +145,7 @@ typedef struct
     drysponge128_x_t x;         /**< "x" value for the sponge */
 } __attribute__((aligned(16))) drysponge128_state_t;
 
-/* XOR two source byte buffers and put the result in a destination buffer */
+// XOR two source byte buffers and put the result in a destination buffer
 #define lw_xor_block_2_src(dest, src1, src2, len) \
     do { \
         unsigned char *_dest = (dest); \
@@ -190,12 +196,12 @@ static void drygascon128_f_wrap(drysponge128_state_t *state, const unsigned char
 }
 
 static void drysponge128_setup_k32(drysponge128_state_t *state, const unsigned char *key){
-    /* Fill the GASCON-128 state with repeated copies of the key */
+    // Fill the GASCON-128 state with repeated copies of the key
     memcpy(state->c.B, key, 16);
     memcpy(state->c.B + 16, key, 16);
     memcpy(state->c.B + 32, key, 8);
     
-    /* Fill X with the 16 last bytes of the key */
+    // Fill X with the 16 last bytes of the key
     memcpy(state->x.B, key+16, sizeof(state->x));
 }
 
@@ -212,14 +218,14 @@ static void drysponge128_setup
      const unsigned char *nonce, int final_block){
     drysponge128_setup_k32(state, key);
 
-    /* Absorb the nonce into the state with an increased number of rounds */
+    // Absorb the nonce into the state with an increased number of rounds
     state->rounds = DRYSPONGE128_INIT_ROUNDS;
     state->domain = DRYDOMAIN128_NONCE;
     if (final_block)
         state->domain |= DRYDOMAIN128_FINAL;
     drygascon128_f_full(state, nonce);
 
-    /* Set up the normal number of rounds for future operations */
+    // Set up the normal number of rounds for future operations
     state->rounds = DRYSPONGE128_ROUNDS;
 }
 
@@ -234,16 +240,15 @@ static void drysponge128_setup
  */
 static void drygascon128_process_ad
     (drysponge128_state_t *state, const unsigned char *ad,
-     unsigned long long adlen, int finalize)
-{
-    /* Process all blocks except the last one */
+     unsigned long long adlen, int finalize){
+    // Process all blocks except the last one
     while (adlen > DRYSPONGE128_RATE) {
         drygascon128_f_full(state, ad);
         ad += DRYSPONGE128_RATE;
         adlen -= DRYSPONGE128_RATE;
     }
 
-    /* Process the last block with domain separation and padding */
+    // Process the last block with domain separation and padding
     state->domain = DRYDOMAIN128_ASSOC_DATA;
     if (finalize)
         state->domain |= DRYDOMAIN128_FINAL;
@@ -256,25 +261,24 @@ static int drygascon128_aead_encrypt_core
      const unsigned char *ad, unsigned long long adlen,
 	 unsigned int keysize,
      const unsigned char *npub,
-     const unsigned char *k)
-{
+     const unsigned char *k){
     drysponge128_state_t state;
 
-    /* Set the length of the returned ciphertext */
+    // Set the length of the returned ciphertext
     *clen = mlen + DRYGASCON128_TAG_SIZE;
 
-    /* Initialize the sponge state with the key and nonce */
+    // Initialize the sponge state with the key and nonce
     drysponge128_setup(&state, k, keysize, npub, adlen == 0 && mlen == 0);
 
-    /* Process the associated data */
+    // Process the associated data
     if (adlen > 0)
         drygascon128_process_ad(&state, ad, adlen, mlen == 0);
 
-    /* Encrypt the plaintext to produce the ciphertext */
+    // Encrypt the plaintext to produce the ciphertext
     if (mlen > 0) {
         #ifdef AEAD_DETECT_OVERLAP
         if(c==m) {
-            /* Deal with in-place encryption case */
+            // Deal with in-place encryption case
             drysponge128_rate_t tmp; 
             unsigned char *m2 = (unsigned char *)&tmp;
             /* Processs all blocks except the last one */
@@ -288,7 +292,7 @@ static int drygascon128_aead_encrypt_core
             }
         }else{
         #endif
-            /* Processs all blocks except the last one */
+            // Processs all blocks except the last one
             while (mlen > DRYSPONGE128_RATE) {
                 lw_xor_block_2_src(c, m, state.r.B, DRYSPONGE128_RATE);
                 drygascon128_f_full(&state, m);
@@ -300,11 +304,11 @@ static int drygascon128_aead_encrypt_core
         }
         #endif
 
-        /* Process the last block with domain separation and padding */
+        // Process the last block with domain separation and padding
         state.domain = DRYDOMAIN128_MESSAGE | DRYDOMAIN128_FINAL;
         #ifdef AEAD_DETECT_OVERLAP
         if(c==m) {
-            /* Deal with in-place encryption case */
+            // Deal with in-place encryption case
             drysponge128_rate_t tmp; 
             unsigned char *m2 = (unsigned char *)&tmp;
             memcpy(m2,m,DRYSPONGE128_RATE);
@@ -320,9 +324,8 @@ static int drygascon128_aead_encrypt_core
         c += mlen;
     }
 
-    /* Generate the authentication tag */
+    // Generate the authentication tag
     memcpy(c, state.r.B, DRYGASCON128_TAG_SIZE);
-    //c+=DRYGASCON128_TAG_SIZE;
     return 0;
 }
 
@@ -332,26 +335,25 @@ static int drygascon128_aead_decrypt_core
      const unsigned char *c, unsigned long long clen,
      const unsigned char *ad, unsigned long long adlen,
      const unsigned char *npub,
-     const unsigned char *k)
-{
+     const unsigned char *k){
     drysponge128_state_t state;
 
-    /* Validate the ciphertext length and set the return "mlen" value */
+    // Validate the ciphertext length and set the return "mlen" value
     if (clen < DRYGASCON128_TAG_SIZE)
         return -1;
     *mlen = clen - DRYGASCON128_TAG_SIZE;
 
-    /* Initialize the sponge state with the key and nonce */
+    // Initialize the sponge state with the key and nonce
     clen -= DRYGASCON128_TAG_SIZE;
     drysponge128_setup(&state, k, keysize, npub, adlen == 0 && clen == 0);
 
-    /* Process the associated data */
+    // Process the associated data
     if (adlen > 0)
         drygascon128_process_ad(&state, ad, adlen, clen == 0);
 
-    /* Decrypt the ciphertext to produce the plaintext */
+    // Decrypt the ciphertext to produce the plaintext
     if (clen > 0) {
-        /* Processs all blocks except the last one */
+        // Processs all blocks except the last one
         while (clen > DRYSPONGE128_RATE) {
             lw_xor_block_2_src(m, c, state.r.B, DRYSPONGE128_RATE);
             drygascon128_f_full(&state, m);
@@ -360,7 +362,7 @@ static int drygascon128_aead_decrypt_core
             clen -= DRYSPONGE128_RATE;
         }
 
-        /* Process the last block with domain separation and padding */
+        // Process the last block with domain separation and padding
         state.domain = DRYDOMAIN128_MESSAGE | DRYDOMAIN128_FINAL;
         lw_xor_block_2_src(m, c, state.r.B, (unsigned)clen);
         drygascon128_f_wrap(&state, m, (unsigned)clen);

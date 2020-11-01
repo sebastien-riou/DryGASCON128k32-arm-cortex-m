@@ -1,6 +1,6 @@
 
 #include "crypto_hash.h"
-#include "drygascon.h"
+#include "drygascon128k32.h"
 
 int crypto_hash(
     unsigned char *out,

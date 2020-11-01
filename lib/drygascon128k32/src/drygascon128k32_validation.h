@@ -1,6 +1,10 @@
 #ifndef __DRYGASCON128K32_VALIDATION_H__
 #define __DRYGASCON128K32_VALIDATION_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <string.h>
 
@@ -263,5 +267,10 @@ static int drygascon128k32_validate_all(
     out=drygascon128_validate_hash(hash);
     return out;
 }
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

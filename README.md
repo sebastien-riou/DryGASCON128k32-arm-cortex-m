@@ -1,5 +1,7 @@
 # DryGASCON128k32-arm-cortex-m
-Self contained DryGASCON128k32 AEAD and Hash, optimized for ARM Cortex-M CPUs
+Self contained DryGASCON128k32 AEAD and Hash, optimized for ARM Cortex-M CPUs.
+
+This repository also provides a validation suite usable for any DryGASCON128k32 implementation.
 
 ## Properties
 - Probably the lowest code size on Cortex-M
@@ -15,33 +17,29 @@ Code size in bytes, results may vary slightly depending on how you call the func
 
 |      | Cortex-M0 | Cortex-M3 | Cortex-M4 | Cortex-M7 |
 |:----:|:---------:|:---------:|:---------:|:---------:|
-| HASH | 1244      | 1184      | 1184      | 1184      |  
-| AEAD | 1500      | 1416      | 1408      | 1408      |  
-| BOTH | 1656      | 1600      | 1632      | 1568      |  
+| HASH | 1316      | 1256      | 1272      | 1284      |  
+| AEAD | 1580      | 1488      | 1496      | 1508      |  
+| BOTH | 1708      | 1648      | 1656      | 1672      |  
 
 ### Measurement method:
 Figures are obtained by setting `VALIDATION`=0 and changing constants `DO_HASH` and `DO_AEAD` in `src/test/test.cpp`
-Example for Cortex-M4: output of build with platformio's defaults
+Example for Cortex-M7: output of build with platformio's defaults
 ````
 #define DO_HASH 0
 #define DO_AEAD 0
-RAM:   [          ]   2.7% (used 3488 bytes from 131072 bytes)
-Flash: [=         ]   8.3% (used 43628 bytes from 524288 bytes)
+Flash: [          ]   3.0% (used 63752 bytes from 2097152 bytes)
 
 #define DO_HASH 1
 #define DO_AEAD 0
-RAM:   [          ]   2.7% (used 3488 bytes from 131072 bytes)
-Flash: [=         ]   8.5% (used 44812 bytes from 524288 bytes)
+Flash: [          ]   3.1% (used 65036 bytes from 2097152 bytes)
 
 #define DO_HASH 0
 #define DO_AEAD 1
-RAM:   [          ]   2.7% (used 3488 bytes from 131072 bytes)
-Flash: [=         ]   8.6% (used 45036 bytes from 524288 bytes)
+Flash: [          ]   3.1% (used 65260 bytes from 2097152 bytes)
 
 #define DO_HASH 1
 #define DO_AEAD 1
-RAM:   [          ]   2.7% (used 3488 bytes from 131072 bytes)
-Flash: [=         ]   8.6% (used 45260 bytes from 524288 bytes)
+Flash: [          ]   3.1% (used 65424 bytes from 2097152 bytes)
 ````
 
 ## Warning
